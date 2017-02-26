@@ -2,12 +2,8 @@
 #include <oauth.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#include <readline/readline.h>
-#include <readline/history.h>
-
-char *c_key	= "48a3488764a038f953bc59507a7fde83";
+char *c_key = "48a3488764a038f953bc59507a7fde83";
 char *c_secret = "07b8a4a0e1debb0792d81dc0f994b652";
 char *t_tok;
 char *t_secret;
@@ -23,21 +19,21 @@ char * get(char *uri)
 	return reply;
 }
 
-int parse_auth_reply(char *reply)
+static int parse_auth_reply(char *reply)
 {
 	char **resp = NULL;
 	int num = oauth_split_url_parameters(reply, &resp);
 	if (num < 2) {
 		return 1;
 	}
-	t_tok	= strdup(&(resp[0][12]));
+	t_tok = strdup(&(resp[0][12]));
 	t_secret = strdup(&(resp[1][19]));
 
 	free(resp);
 	return 0;
 }
 
-int req_tok()
+static int req_tok()
 {
 	char *req_tok_uri, *reply;
 
@@ -50,15 +46,21 @@ int req_tok()
 }
 
 //https://us.etrade.com/e/etws/authorize?key={oauth_consumer_key}&token={oauth_token}
-char * authorize()
+static char * authorize()
 {
-	printf("AUTHORIZATION REQUIRED\nhttps://us.etrade.com/e/t/etws/authorize?key=%s&token=%s\n", c_key, t_tok);
-	return readline("Verification Code: ");
+	char *m =	"AUTHORIZATION REQUIRED\n"
+				"https://us.etrade.com/e/t/etws/authorize?key=%s&token=%s\n\n"
+				"Verification Code: ";
+	printf(m, c_key, t_tok);
+	char *line = NULL;
+	size_t n = 0;
+	ssize_t r = getline(&line, &n, stdin);
+	line[r-1] = '\0';
+	return line;
 }
 
 //https://etws.etrade.com/oauth/access_token
-//const char *req_tok_uri = "https://etwssandbox.etrade.com/oauth/request_token?oauth_callback=oob";
-void acc_tok(char *v_code)
+static void acc_tok(char *v_code)
 {
 	char acc_tok_uri[] = "https://etwssandbox.etrade.com/oauth/access_token?oauth_verifier=";
 	int len = strlen(v_code);
@@ -73,32 +75,19 @@ void acc_tok(char *v_code)
 	free(t_secret);
 	parse_auth_reply(reply);
 
-	free(v_code);
 	free(uri);
 	free(reply);
 }
 
 int authorize_app()
 {
+	char *v_code;
+
 	req_tok();
-	acc_tok(authorize());
+	v_code = authorize();
+	acc_tok(v_code);
+
+	free(v_code);
 	return 0;
 }
 
-int main(int argc, char const* argv[])
-{
-	char *reply;
-
-	if (authorize_app() == 1) {
-		return 1;
-	}
-
-	for (;;) {
-		reply = get("https://etwssandbox.etrade.com/market/sandbox/rest/quote/GOOG,AAPL,INTC.json&detailFlag=FUNDAMENTAL");
-		printf("%s\n\n", reply);
-		free(reply);
-		sleep(3);
-	}
-
-	return 0;
-}

@@ -1,5 +1,5 @@
 default:
-	cc main.c -lssl -loauth -lreadline -g --pedantic
+	cc rtrade.c cJSON.c auth.c -o rtrade -lssl -lm -loauth -lreadline -g --pedantic
 
 release:
-	cc main.c -lssl -loauth -lreadline -O2 -march=silvermont -s
+	cc rtrade.c cJSON.c auth.c -o rtrade -lssl -loauth -lreadline -O2 -s -lm
