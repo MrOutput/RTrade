@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *c_key = "48a3488764a038f953bc59507a7fde83";
-char *c_secret = "07b8a4a0e1debb0792d81dc0f994b652";
+char *c_key;
+char *c_secret;
 char *t_tok;
 char *t_secret;
 
@@ -90,4 +90,3 @@ int authorize_app()
 	free(v_code);
 	return 0;
 }
-
