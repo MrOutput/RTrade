@@ -11,17 +11,29 @@
 extern char *c_key;
 extern char *c_secret;
 
-void show_quotes()
+enum {
+	ERROR,
+	SUCCESS
+};
+
+int show_quotes()
 {
 	char *reply, *uri;
-	cJSON *root, *quote;
+	cJSON *root = NULL, *quote = NULL;
 
 	uri = "https://etwssandbox.etrade.com/market/sandbox/rest/quote/GOOG,AAPL,INTC.json&detailFlag=INTRADAY";
 	reply = get(uri);
-
+	if (!reply) {
+		return ERROR;
+	}
 	root = cJSON_Parse(reply);
+	if (!root) {
+		return ERROR;
+	}
 	quote = root->child->child->child;
-
+	if (!quote) {
+		return ERROR;
+	}
 	while (quote) {
 		printf(
 			"%s %12f\n",
@@ -33,6 +45,7 @@ void show_quotes()
 	printf("\n");
 	free(reply);
 	cJSON_Delete(root);
+	return SUCCESS;
 }
 
 void errusage(void)
@@ -68,13 +81,18 @@ void parse_args(int argc, char **argv)
 
 int main(int argc, char *argv[])
 {
+	int status = SUCCESS;
 	parse_args(argc, argv);
 	if (!authorize_app()) {
-        return 1;
-    }
+		puts("ERROR: Could not authorize.");
+		return 1;
+	}
 	for (;;) {
-		show_quotes();
-		sleep(3);
+		if (show_quotes()) {
+			sleep(3);
+		} else {
+			return 1;
+		}
 	}
 	return 0;
 }
