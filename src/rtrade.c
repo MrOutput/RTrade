@@ -96,16 +96,21 @@ void parse_args(int argc, char **argv)
 	}
 }
 
+void strupper(char *s)
+{
+	while (*s != '\0') {
+		*s = toupper(*s);
+		s++;
+	}
+}
+
 void parse_stocks(char *stock[])
 {
 	stocks = malloc(sizeof(struct quote) * stock_count);
 
 	for (int i = 0; i < stock_count; i++) {
 		stocks[i].symbol = strdup(stock[i]);
-
-		for (int j = 0; stocks[i].symbol[j] != '\0'; j++) {
-			stocks[i].symbol[j] = toupper(stocks[i].symbol[j]);
-		}
+		strupper(stocks[i].symbol);
 	}
 }
 
