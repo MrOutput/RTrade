@@ -69,7 +69,9 @@ void parse_args(int argc, char **argv)
 int main(int argc, char *argv[])
 {
 	parse_args(argc, argv);
-	authorize_app();
+	if (!authorize_app()) {
+        return 1;
+    }
 	for (;;) {
 		show_quotes();
 		sleep(3);
