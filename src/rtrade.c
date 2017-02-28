@@ -5,6 +5,8 @@
 #include <getopt.h>
 #include <string.h>
 
+#include <ctype.h>
+
 #include "../lib/cJSON.h"
 #include "auth.h"
 
@@ -16,13 +18,28 @@ enum {
 	SUCCESS
 };
 
+int stock_count;
+struct quote {
+	char *symbol;
+	double price;
+};
+struct quote *stocks;
+char *final_uri;
+
+char * quote_uri()
+{
+	char uri[] = "https://etwssandbox.etrade.com/market/sandbox/rest/quote/goog,aapl.json&detailFlag=INTRADAY";
+	char *c = malloc(sizeof(uri));
+	memcpy(c, uri, sizeof(uri));
+	return c;
+}
+
 int show_quotes()
 {
-	char *reply, *uri;
+	char *reply;
 	cJSON *root = NULL, *quote = NULL;
 
-	uri = "https://etwssandbox.etrade.com/market/sandbox/rest/quote/GOOG,AAPL,INTC.json&detailFlag=INTRADAY";
-	reply = get(uri);
+	reply = get(final_uri);
 	if (!reply) {
 		return ERROR;
 	}
@@ -79,10 +96,29 @@ void parse_args(int argc, char **argv)
 	}
 }
 
+void parse_stocks(char *stock[])
+{
+	stocks = malloc(sizeof(struct quote) * stock_count);
+
+	for (int i = 0; i < stock_count; i++) {
+		stocks[i].symbol = strdup(stock[i]);
+
+		for (int j = 0; stocks[i].symbol[j] != '\0'; j++) {
+			stocks[i].symbol[j] = toupper(stocks[i].symbol[j]);
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
+	if (argc < 6) {
+		errusage();
+	}
 	int status = SUCCESS;
 	parse_args(argc, argv);
+	stock_count = argc - 5;
+	parse_stocks(&(argv[5]));
+	final_uri = quote_uri();
 	if (!authorize_app()) {
 		puts("ERROR: Could not authorize.");
 		return 1;
