@@ -1,10 +1,8 @@
-default: clean
-	mkdir bin
-	cc src/rtrade.c lib/cJSON.c -o bin/rtrade -lssl -lm -lcurl -loauth -g --pedantic
+default:
+	cc -g --pedantic -o rtrade -lcurl -loauth -lm src/rtrade.c src/lib/cJSON.c
 
-release: clean
-	mkdir bin
-	cc src/rtrade.c lib/cJSON.c -o bin/rtrade -lssl -loauth -O2 -lcurl -s -lm
+release:
+	cc -O2 -s -o rtrade -lcurl -loauth -lm src/rtrade.c src/lib/cJSON.c
 
 clean:
-	rm -rf bin
+	rm ./rtrade

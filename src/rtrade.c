@@ -7,18 +7,18 @@
 #include <ctype.h>
 #include <oauth.h>
 #include <curl/curl.h>
-#include "../lib/cJSON.h"
+#include "lib/cJSON.h"
 
 struct oauth_creds {
-    char *c_key;
-    char *c_secret;
-    char *t_tok;
-    char *t_secret;
+	char *c_key;
+	char *c_secret;
+	char *t_tok;
+	char *t_secret;
 };
 
 struct quote {
-    char *sym;
-    double price;
+	char *sym;
+	double price;
 };
 
 struct oauth_creds creds;
@@ -46,68 +46,70 @@ main(int argc, char *argv[])
 		xerror(usage);
 	}
 
-    nquotes = argc - 5;
-    quotes = alloca(sizeof(struct quote) * nquotes);
+	nquotes = argc - 5;
+	quotes = alloca(sizeof(struct quote) * nquotes);
 
 	parse_args(argc, argv);
 	parse_stocks(&argv[5]);
 
-    curl_global_init(CURL_GLOBAL_SSL);
-    curl = curl_easy_init();
+	curl_global_init(CURL_GLOBAL_SSL);
+	curl = curl_easy_init();
 
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
 
-        char *resp = oauth_get("https://etwssandbox.etrade.com/oauth/request_token?oauth_callback=oob");
-        char **params = NULL;
-        int len = oauth_split_url_parameters(resp, &params);
-        free(resp);
-        if (len == 3) {
-            creds.t_tok = xstrdup(&params[0][12]);
-            creds.t_secret = xstrdup(&params[1][19]);
-            oauth_free_array(&len, &params);
+		char *resp = oauth_get("https://etwssandbox.etrade.com/oauth/request_token?oauth_callback=oob");
+		char **params = NULL;
+		int len = oauth_split_url_parameters(resp, &params);
+		free(resp);
+		if (len == 3) {
+			creds.t_tok = xstrdup(&params[0][12]);
+			creds.t_secret = xstrdup(&params[1][19]);
+			oauth_free_array(&len, &params);
 
-            char fmt[] = "https://us.etrade.com/e/t/etws/authorize?key=%s&token=%s";
-            int max = sizeof(fmt) + strlen(creds.c_key) + strlen(creds.t_tok);
-            char *buf = alloca(max);
-            snprintf(buf, max, fmt, creds.c_key, creds.t_tok);
-            printf("%s\n\n", buf);
+			char fmt[] = "https://us.etrade.com/e/t/etws/authorize?key=%s&token=%s";
+			int max = sizeof(fmt) + strlen(creds.c_key) + strlen(creds.t_tok);
+			char *buf = alloca(max);
+			snprintf(buf, max, fmt, creds.c_key, creds.t_tok);
+			printf("%s\n\n", buf);
 
-            char *code = NULL;
-            printf("Code: ");
-            len = readin_str(&code);
+			char *code = NULL;
+			printf("Code: ");
+			len = readin_str(&code);
 
-            char atfmt[] = "https://etwssandbox.etrade.com/oauth/access_token?oauth_verifier=%s";
-            max = sizeof(atfmt) + len;
-            buf = alloca(max);
-            snprintf(buf, max, atfmt, code);
-            free(code);
+			char atfmt[] = "https://etwssandbox.etrade.com/oauth/access_token?oauth_verifier=%s";
+			max = sizeof(atfmt) + len;
+			buf = alloca(max);
+			snprintf(buf, max, atfmt, code);
+			free(code);
 
-            resp = oauth_get(buf);
+			resp = oauth_get(buf);
+			printf("BUF: %s\n", buf);
+			printf("RESP: %s\n", resp);
 
-            params = NULL;
-            len = oauth_split_url_parameters(resp, &params);
+			params = NULL;
+			len = oauth_split_url_parameters(resp, &params);
 
-            if (len == 2) {
-                free(creds.t_tok);
-                free(creds.t_secret);
-                creds.t_tok = xstrdup(&params[0][12]);
-                creds.t_secret = xstrdup(&params[1][19]);
-                oauth_free_array(&len, &params);
+			if (len == 2) {
+				free(creds.t_tok);
+				free(creds.t_secret);
+				creds.t_tok = xstrdup(&params[0][12]);
+				creds.t_secret = xstrdup(&params[1][19]);
+				oauth_free_array(&len, &params);
 
-                for (;;) {
-                    update();
-                    render();
-                    sleep(5);
-                }
-            }
-            free(creds.t_tok);
-            free(creds.t_secret);
-        }
-        curl_easy_cleanup(curl);
-    }
+				for (;;) {
+					update();
+					render();
+					sleep(5);
+				}
+			}
+			free(creds.t_tok);
+			free(creds.t_secret);
+		}
+		curl_easy_cleanup(curl);
+	}
 
-    curl_global_cleanup();
+	curl_global_cleanup();
 	return 0;
 }
 
@@ -142,52 +144,52 @@ void
 parse_stocks(char **stocks)
 {
 	for (int i = 0; i < nquotes; i++) {
-        quotes[i].sym = strupper(stocks[i]);
-        quotes[i].price = 0.0;
+		quotes[i].sym = strupper(stocks[i]);
+		quotes[i].price = 0.0;
 	}
 }
 
 char *
 strupper(char *s)
 {
-    char *org = s;
+	char *org = s;
 	while (*s != '\0') {
 		*s = toupper(*s);
 		s++;
 	}
-    return org;
+	return org;
 }
 
 
 void *
 xstrdup(const char *s)
 {
-    char *ptr = strdup(s);
-    if (ptr == NULL) {
-        exit(EXIT_FAILURE);
-    }
-    return ptr;
+	char *ptr = strdup(s);
+	if (ptr == NULL) {
+		exit(EXIT_FAILURE);
+	}
+	return ptr;
 }
 
 size_t
 write_callback(char *ptr, size_t size, size_t nmemb, void **userdata)
 {
-    size_t total = size * nmemb;
-    *userdata = xstrdup(ptr);
-    strcpy(*userdata, ptr);
-    return total;
+	size_t total = size * nmemb;
+	*userdata = xstrdup(ptr);
+	strcpy(*userdata, ptr);
+	return total;
 }
 
 char *
 oauth_get(char *url)
 {
-    char *signed_url = oauth_sign_url2(url, NULL, OA_HMAC, NULL,
-            creds.c_key, creds.c_secret, creds.t_tok, creds.t_secret);
-    char *resp = NULL;
-    curl_easy_setopt(curl, CURLOPT_URL, signed_url);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
-    CURLcode res = curl_easy_perform(curl);
-    return resp;
+	char *signed_url = oauth_sign_url2(url, NULL, OA_HMAC, NULL,
+			creds.c_key, creds.c_secret, creds.t_tok, creds.t_secret);
+	char *resp = NULL;
+	curl_easy_setopt(curl, CURLOPT_URL, signed_url);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
+	CURLcode res = curl_easy_perform(curl);
+	return resp;
 }
 
 int
@@ -202,7 +204,7 @@ readin_str(char **line)
 void
 update()
 {
-    char *url = "https://etwssandbox.etrade.com/market/sandbox/rest/quote/goog,aapl.json&detailFlag=INTRADAY";
+	char *url = "https://etwssandbox.etrade.com/market/sandbox/rest/quote/goog,aapl.json&detailFlag=INTRADAY";
 	char *reply;
 	cJSON *root = NULL, *qdata = NULL;
 
@@ -211,10 +213,10 @@ update()
 	free(reply);
 	qdata = root->child->child->child;
 
-    for (int i = 0; qdata != NULL; i++) {
-        quotes[i].price = cJSON_GetObjectItem(qdata->child->next, "lastTrade")->valuedouble;
+	for (int i = 0; qdata != NULL; i++) {
+		quotes[i].price = cJSON_GetObjectItem(qdata->child->next, "lastTrade")->valuedouble;
 		qdata = qdata->next;
-    }
+	}
 
 	cJSON_Delete(root);
 }
@@ -222,7 +224,7 @@ update()
 void
 render()
 {
-    for (int i = 0; i < nquotes; i++) {
-        printf("%s %f\n", quotes[i].sym, quotes[i].price);
-    }
+	for (int i = 0; i < nquotes; i++) {
+		printf("%s %f\n", quotes[i].sym, quotes[i].price);
+	}
 }
