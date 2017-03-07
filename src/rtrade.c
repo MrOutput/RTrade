@@ -32,6 +32,7 @@ int parse_args(int argc, char **argv);
 void parse_stocks(char **stocks);
 int strupper(char *s);
 char * oauth_get(char *url);
+void oauth_creds_get(char *url);
 void * xstrdup(const char *s);
 void * xmalloc(size_t s);
 int readin_str(char **line);
@@ -54,54 +55,31 @@ main(int argc, char *argv[])
 	parse_stocks(&argv[progargs]);
 	set_quote_url();
 
-	char *resp = oauth_get("https://etwssandbox.etrade.com/oauth/request_token?oauth_callback=oob");
-	char **params = NULL;
-	int len = oauth_split_url_parameters(resp, &params);
-	free(resp);
-	if (len == 3) {
-		creds.t_tok = xstrdup(&params[0][12]);
-		creds.t_secret = xstrdup(&params[1][19]);
-		oauth_free_array(&len, &params);
+	oauth_creds_get("https://etwssandbox.etrade.com/oauth/request_token?oauth_callback=oob");
 
-		char fmt[] = "https://us.etrade.com/e/t/etws/authorize?key=%s&token=%s";
-		int max = sizeof(fmt) + strlen(creds.c_key) + strlen(creds.t_tok);
-		char *buf = xmalloc(max);
-		snprintf(buf, max, fmt, creds.c_key, creds.t_tok);
-		printf("%s\n\n", buf);
+	char fmt[] = "https://us.etrade.com/e/t/etws/authorize?key=%s&token=%s";
+	int max = sizeof(fmt) + strlen(creds.c_key) + strlen(creds.t_tok);
+	char *buf = xmalloc(max);
+	snprintf(buf, max, fmt, creds.c_key, creds.t_tok);
+	printf("%s\n\n", buf);
 
-		char *code = NULL;
-		printf("Code: ");
-		len = readin_str(&code);
+	char *code = NULL;
+	printf("Code: ");
+	int len = readin_str(&code);
 
-		char atfmt[] = "https://etwssandbox.etrade.com/oauth/access_token?oauth_verifier=%s";
-		max = sizeof(atfmt) + len;
-		buf = xmalloc(max);
-		snprintf(buf, max, atfmt, code);
-		free(code);
+	char atfmt[] = "https://etwssandbox.etrade.com/oauth/access_token?oauth_verifier=%s";
+	max = sizeof(atfmt) + len;
+	buf = xmalloc(max);
+	snprintf(buf, max, atfmt, code);
+	free(code);
 
-		resp = oauth_get(buf);
+	oauth_creds_get(buf);
 
-		params = NULL;
-		len = oauth_split_url_parameters(resp, &params);
-		free(resp);
-
-		if (len == 2) {
-			free(creds.t_tok);
-			free(creds.t_secret);
-			creds.t_tok = xstrdup(&params[0][12]);
-			creds.t_secret = xstrdup(&params[1][19]);
-			oauth_free_array(&len, &params);
-
-			for (;;) {
-				update();
-				render();
-				sleep(sdelay);
-			}
-		}
-		free(creds.t_tok);
-		free(creds.t_secret);
+	for (;;) {
+		update();
+		render();
+		sleep(sdelay);
 	}
-
 	return 0;
 }
 
@@ -270,4 +248,24 @@ set_quote_url()
 	midbuf[size - 1] = '\0';
 	snprintf(quote_url, len, "%s%s%s", base, midbuf, suf);
 	free(midbuf);
+}
+
+void
+oauth_creds_get(char *url)
+{
+	char *resp = oauth_get(url);
+	char **params = NULL;
+	int len = oauth_split_url_parameters(resp, &params);
+
+	if (creds.t_tok) {
+		free(creds.t_tok);
+	}
+	if (creds.t_secret) {
+		free(creds.t_secret);
+	}
+	creds.t_tok = xstrdup(&params[0][12]);
+	creds.t_secret = xstrdup(&params[1][19]);
+
+	oauth_free_array(&len, &params);
+	free(resp);
 }
