@@ -62,6 +62,7 @@ main(int argc, char *argv[])
 	char *buf = xmalloc(max);
 	snprintf(buf, max, fmt, creds.c_key, creds.t_tok);
 	printf("%s\n\n", buf);
+	free(buf);
 
 	char *code = NULL;
 	printf("Code: ");
@@ -74,6 +75,7 @@ main(int argc, char *argv[])
 	free(code);
 
 	oauth_creds_get(buf);
+	free(buf);
 
 	for (;;) {
 		update();
